@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chat App</title>
+    <link rel="stylesheet" href="/css/styles.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+</head>
+<body class="light-theme">
+    <div class="theme-toggle">
+        <button id="themeToggle">
+            <i class="fas fa-moon"></i>
+        </button>
+    </div>
+
+    <!-- Background Elements -->
+    <div class="bg-elements">
+        <div class="floating-shape shape1"></div>
+        <div class="floating-shape shape2"></div>
+        <div class="floating-shape shape3"></div>
+    </div>
+
+    <!-- User Registration Modal -->
+    <div class="modal" id="userModal">
+        <div class="modal-content glass">
+            <div class="welcome-animation">
+                <div class="logo">
+                    <i class="fas fa-comments"></i>
+                </div>
+            </div>
+            <h2>Welcome to ChatSphere</h2>
+            <p class="subtitle">Start your chat experience</p>
+            <div class="input-group">
+                <div class="input-wrapper">
+                    <i class="fas fa-user"></i>
+                    <input type="text" id="userName" placeholder="Enter your name">
+                </div>
+                <div class="avatar-preview" id="avatarPreview"></div>
+            </div>
+            <button id="startChatButton" class="pulse-button">
+                <span>Start Chatting</span>
+                <i class="fas fa-arrow-right"></i>
+            </button>
+        </div>
+    </div>
+
+    <!-- Main Chat Interface -->
+    <div class="chat-container glass" id="chatContainer" style="display: none;">
+        <div class="chat-header">
+            <div class="user-info">
+                <div class="current-user-avatar" id="currentUserAvatar"></div>
+                <span id="currentUser"></span>
+            </div>
+            <div class="header-actions">
+                <button id="changeUser" class="icon-button">
+                    <i class="fas fa-sign-out-alt"></i>
+                </button>
+            </div>
+        </div>
+
+        <div class="online-users glass-light">
+            <h3><i class="fas fa-users"></i> Chat with</h3>
+            <div id="usersList" class="users-list">
+                <!-- Online users will be listed here -->
+            </div>
+        </div>
+
+        <div class="chat-area" id="chatArea">
+            <!-- Messages will be added here dynamically -->
+            <div class="chat-background"></div>
+        </div>
+
+        <div class="input-section glass-light">
+            <div class="recipient-selector">
+                <i class="fas fa-at"></i>
+                <select id="recipientSelect">
+                    <option value="">Select recipient...</option>
+                </select>
+            </div>
+            <div class="message-input-wrapper">
+                <button class="emoji-button">
+                    <i class="far fa-smile"></i>
+                </button>
+                <input type="text" id="messageInput" placeholder="Type your message...">
+                <button class="attachment-button">
+                    <i class="fas fa-paperclip"></i>
+                </button>
+            </div>
+            <button id="sendButton" class="send-button">
+                <i class="fas fa-paper-plane"></i>
+            </button>
+        </div>
+    </div>
+
+    <!-- Emoji Picker Panel -->
+    <div class="emoji-panel" id="emojiPanel">
+        <div class="emoji-categories">
+            <button class="active">😀</button>
+            <button>❤️</button>
+            <button>🐶</button>
+            <button>🌺</button>
+            <button>🎮</button>
+        </div>
+        <div class="emoji-grid">
+            <!-- Emojis will be added here -->
+        </div>
+    </div>
+
+    <!-- Message Context Menu -->
+    <div class="message-context-menu" id="messageContextMenu">
+        <button><i class="fas fa-reply"></i> Reply</button>
+        <button><i class="fas fa-copy"></i> Copy</button>
+        <button><i class="fas fa-trash"></i> Delete</button>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>

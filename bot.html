@@ -1,0 +1,318 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Chatbot with Spline Background</title>
+    <script type="module" src="https://unpkg.com/@splinetool/viewer@latest"></script>
+    <style>
+      body,
+      html {
+        margin: 0;
+        padding: 0;
+        height: 100%;
+        overflow: hidden;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: transparent;
+      }
+      #spline-container {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        z-index: 0;
+      }
+      .chat-container {
+        width: 1100px;
+        height: 400px;
+        margin-top: 170px;
+        background: rgba(255, 255, 255, 0);
+        border-radius: 15px;
+        box-shadow: 0px 5px 15px rgba(0, 0, 0, 0.2);
+        display: flex;
+        flex-direction: column;
+        padding: 15px;
+        position: relative;
+        z-index: 10;
+      }
+      .chat-messages {
+        flex: 1;
+        overflow-y: auto;
+        padding: 10px;
+        display: flex;
+        flex-direction: column;
+      }
+      .chat-input {
+        display: flex;
+        gap: 10px;
+        margin-top: 10px;
+      }
+      .chat-input input {
+        flex: 1;
+        padding: 10px;
+        border: 1px solid #151414;
+        border-radius: 8px;
+      }
+      .chat-input button {
+        padding: 10px 15px;
+        border: none;
+        background: #6305ac;
+        color: white;
+        border-radius: 8px;
+        cursor: pointer;
+      }
+      .chat-input button:hover {
+        background: #6305ac;
+      }
+      .message {
+        padding: 10px;
+        margin: 5px 0;
+        border-radius: 10px;
+        max-width: 75%;
+        word-wrap: break-word;
+      }
+      .user-message {
+        background: #58098d;
+        color: white;
+        align-self: flex-end;
+        font-size: 18px;
+      }
+      .bot-message {
+        background: #393639;
+        color: white;
+        align-self: flex-start;
+        font-size: 18px;
+      }
+      #home-btn {
+        position: fixed;
+        bottom: 20px;
+        right: 20px;
+        width: 150px;
+        background: #6e0691;
+        color: white;
+        border: none;
+        padding: 10px 20px;
+        font-size: 16px;
+        border-radius: 8px;
+        cursor: pointer;
+        z-index: 20;
+      }
+      #home-btn:hover {
+        background: #4e0489;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="spline-container">
+      <spline-viewer url="./nexbot_robot_character_concept.spline"></spline-viewer>
+    </div>
+    <div class="chat-container">
+      <div class="chat-messages" id="chat-messages"></div>
+      <div class="chat-input">
+        <input type="text" id="user-input" placeholder="Type a message..." />
+        <button id="send-btn">Send</button>
+        <button id="tts-btn">🔊</button>
+      </div>
+    </div>
+    <button id="home-btn" onclick="location.href='index.html';">Home</button>
+    <script>
+      const chatWindow = document.getElementById("chat-messages");
+      const userInput = document.getElementById("user-input");
+      const sendBtn = document.getElementById("send-btn");
+      const ttsBtn = document.getElementById("tts-btn");
+      let speechSynthesisUtterance;
+
+      const messageQueue = [];
+      const conversationHistory = [];
+
+      const GEMINI_API_KEY = "your-real-key";
+     const GEMINI_ENDPOINT = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GEMINI_API_KEY}`;
+
+      function appendMessage(message, sender = "bot") {
+        const bubble = document.createElement("div");
+        bubble.className = `message ${sender === "bot" ? "bot-message" : "user-message"}`;
+        bubble.innerHTML = message.replace(/\*/g, "").replace(/\n/g, "<br>");
+        chatWindow.appendChild(bubble);
+        chatWindow.scrollTop = chatWindow.scrollHeight;
+      }
+
+      function processQueue() {
+        if (messageQueue.length > 0) {
+          const { message, sender } = messageQueue.shift();
+          appendMessage(message, sender);
+          if (sender === "bot") speakText(message);
+          setTimeout(processQueue, 800);
+        }
+      }
+
+      async function sendMessage() {
+        const message = userInput.value.trim();
+        if (!message) return;
+
+        messageQueue.push({ message, sender: "user" });
+        conversationHistory.push({ role: "user", parts: [{ text: message }] });
+        userInput.value = "";
+
+        if (messageQueue.length === 1) processQueue();
+
+        try {
+          const response = await fetch(GEMINI_ENDPOINT, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ contents: conversationHistory }),
+          });
+          const data = await response.json();
+          if (
+            data.candidates &&
+            data.candidates.length > 0 &&
+            data.candidates[0].content.parts.length > 0
+          ) {
+            const botResponse = data.candidates[0].content.parts[0].text
+              .replace(/\*/g, "")
+              .replace(/\n/g, "<br>");
+            messageQueue.push({ message: botResponse, sender: "bot" });
+            conversationHistory.push({
+              role: "model",
+              parts: [{ text: botResponse }],
+            });
+          } else {
+            messageQueue.push({
+              message: "No response from the bot.",
+              sender: "bot",
+            });
+          }
+          if (messageQueue.length === 1) processQueue();
+        } catch (error) {
+          console.error("Error:", error);
+          messageQueue.push({
+            message: "Sorry, something went wrong.",
+            sender: "bot",
+          });
+          if (messageQueue.length === 1) processQueue();
+        }
+      }
+
+      // Helper to return a female voice once voices are loaded
+      function getFemaleVoice() {
+        return new Promise((resolve) => {
+          let voices = window.speechSynthesis.getVoices();
+          if (voices.length > 0) {
+            const femaleVoiceNames = [
+              "Samantha",
+              "Microsoft Zira Desktop",
+              "Google US English",
+              "Google UK English Female",
+              "Karen"
+            ];
+            const femaleVoice = voices.find((voice) =>
+              femaleVoiceNames.includes(voice.name)
+            );
+            resolve(femaleVoice || voices[0]);
+          } else {
+            window.speechSynthesis.onvoiceschanged = () => {
+              voices = window.speechSynthesis.getVoices();
+              const femaleVoiceNames = [
+                "Samantha",
+                "Microsoft Zira Desktop",
+                "Google US English",
+                "Google UK English Female",
+                "Karen"
+              ];
+              const femaleVoice = voices.find((voice) =>
+                femaleVoiceNames.includes(voice.name)
+              );
+              resolve(femaleVoice || voices[0]);
+            };
+          }
+        });
+      }
+
+      // Unified speakText function that uses female voice selection
+      async function speakText(text) {
+        if (speechSynthesisUtterance) window.speechSynthesis.cancel();
+        speechSynthesisUtterance = new SpeechSynthesisUtterance(text);
+        speechSynthesisUtterance.lang = "en-US";
+        speechSynthesisUtterance.volume = 1;
+        speechSynthesisUtterance.rate = 1;
+        speechSynthesisUtterance.pitch = 1;
+        const selectedVoice = await getFemaleVoice();
+        speechSynthesisUtterance.voice = selectedVoice;
+        speechSynthesisUtterance.onend = () => {
+          console.log("Speech synthesis complete.");
+        };
+        window.speechSynthesis.speak(speechSynthesisUtterance);
+      }
+
+      // Use keydown for handling Enter key
+      userInput.addEventListener("keydown", (event) => {
+        if (event.key === "Enter") {
+          event.preventDefault();
+          sendMessage();
+        }
+      });
+
+      sendBtn.addEventListener("click", sendMessage);
+
+      ttsBtn.addEventListener("click", () => {
+        if (window.speechSynthesis.speaking && !window.speechSynthesis.paused) {
+          window.speechSynthesis.pause();
+        } else if (window.speechSynthesis.paused) {
+          window.speechSynthesis.resume();
+        } else {
+          let lastBot = conversationHistory
+            .slice()
+            .reverse()
+            .find((item) => item.role === "model");
+          if (
+            lastBot &&
+            lastBot.parts &&
+            lastBot.parts[0] &&
+            lastBot.parts[0].text
+          ) {
+            speakText(
+              lastBot.parts[0].text.replace(/\*/g, "").replace(/\n/g, "<br>")
+            );
+          }
+        }
+      });
+
+      // 🎙 Voice Assistant Feature
+      const SpeechRecognition =
+        window.SpeechRecognition || window.webkitSpeechRecognition;
+      if (!SpeechRecognition) {
+        alert("Your browser does not support speech recognition. Try using Chrome.");
+      } else {
+        const recognition = new SpeechRecognition();
+        recognition.continuous = false;
+        recognition.interimResults = false;
+        recognition.lang = "en-US";
+        // Create voice button dynamically
+        const voiceBtn = document.createElement("button");
+        voiceBtn.id = "voice-btn";
+        voiceBtn.textContent = "🎤 Start Voice";
+        document.querySelector(".chat-input").appendChild(voiceBtn);
+        voiceBtn.addEventListener("click", () => {
+          recognition.start();
+          voiceBtn.textContent = "🎙 Listening...";
+        });
+        recognition.onresult = (event) => {
+          const voiceText = event.results[0][0].transcript;
+          userInput.value = voiceText;
+          sendMessage();
+          voiceBtn.textContent = "🎤 Start Voice";
+        };
+        recognition.onspeechend = () => {
+          recognition.stop();
+        };
+        recognition.onerror = (event) => {
+          console.error("Speech recognition error:", event.error);
+          alert("Error recognizing speech. Try again.");
+          voiceBtn.textContent = "🎤 Start Voice";
+        };
+      }
+    </script>
+  </body>
+</html>
